@@ -16,6 +16,7 @@
 - [improvement] JAVA-1631: Publish a sources jar for driver-core-tests.
 - [improvement] JAVA-1632: Add a withIpPrefix(String) method to CCMBridge.Builder.
 - [bug] JAVA-1639: VersionNumber does not fullfill equals/hashcode contract.
+- [improvement] JAVA-1229: Mapper now supports specifying the keyspace for individual queries.
 
 
 ### 3.3.0

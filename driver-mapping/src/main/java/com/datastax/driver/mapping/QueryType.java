@@ -20,7 +20,7 @@ import com.datastax.driver.core.querybuilder.Delete;
 import com.datastax.driver.core.querybuilder.Insert;
 import com.datastax.driver.core.querybuilder.Select;
 
-import java.util.Collection;
+import java.util.EnumMap;
 import java.util.Set;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.*;
@@ -29,15 +29,13 @@ enum QueryType {
 
     SAVE {
         @Override
-        String makePreparedQueryString(TableMetadata table, EntityMapper<?> mapper, MappingManager manager, Set<AliasedMappedProperty> columns, Collection<Mapper.Option> options) {
-            Insert insert = table == null
-                    ? insertInto(mapper.keyspace, mapper.table)
-                    : insertInto(table);
+        String makePreparedQueryString(TableMetadata table, EntityMapper<?> mapper, MappingManager manager, Set<AliasedMappedProperty> columns, EnumMap<Mapper.Option.Type, Mapper.Option> options) {
+            Insert insert = insertInto(getEffectiveKeyspace(mapper, options), mapper.table);
             for (AliasedMappedProperty col : columns)
                 if (!col.mappedProperty.isComputed())
                     insert.value(col.mappedProperty.getMappedName(), bindMarker());
 
-            for (Mapper.Option opt : options) {
+            for (Mapper.Option opt : options.values()) {
                 opt.validate(QueryType.SAVE, manager);
                 opt.modifyQueryString(insert);
             }
@@ -48,7 +46,7 @@ enum QueryType {
 
     GET {
         @Override
-        String makePreparedQueryString(TableMetadata table, EntityMapper<?> mapper, MappingManager manager, Set<AliasedMappedProperty> columns, Collection<Mapper.Option> options) {
+        String makePreparedQueryString(TableMetadata table, EntityMapper<?> mapper, MappingManager manager, Set<AliasedMappedProperty> columns, EnumMap<Mapper.Option.Type, Mapper.Option> options) {
             Select.Selection selection = select();
             for (AliasedMappedProperty col : mapper.allColumns) {
                 Select.SelectionOrAlias column = col.mappedProperty.isComputed()
@@ -61,17 +59,12 @@ enum QueryType {
                     selection = column.as(col.alias);
                 }
             }
-            Select select;
-            if (table == null) {
-                select = selection.from(mapper.keyspace, mapper.table);
-            } else {
-                select = selection.from(table);
-            }
+            Select select = selection.from(getEffectiveKeyspace(mapper, options), mapper.table);
             Select.Where where = select.where();
             for (int i = 0; i < mapper.primaryKeySize(); i++)
                 where.and(eq(mapper.getPrimaryKeyColumn(i).mappedProperty.getMappedName(), bindMarker()));
 
-            for (Mapper.Option option : options) {
+            for (Mapper.Option option : options.values()) {
                 option.validate(QueryType.GET, manager);
                 option.modifyQueryString(select);
             }
@@ -81,14 +74,12 @@ enum QueryType {
 
     DEL {
         @Override
-        String makePreparedQueryString(TableMetadata table, EntityMapper<?> mapper, MappingManager manager, Set<AliasedMappedProperty> columns, Collection<Mapper.Option> options) {
-            Delete delete = table == null
-                    ? delete().all().from(mapper.keyspace, mapper.table)
-                    : delete().all().from(table);
+        String makePreparedQueryString(TableMetadata table, EntityMapper<?> mapper, MappingManager manager, Set<AliasedMappedProperty> columns, EnumMap<Mapper.Option.Type, Mapper.Option> options) {
+            Delete delete = delete().all().from(getEffectiveKeyspace(mapper, options), mapper.table);
             Delete.Where where = delete.where();
             for (int i = 0; i < mapper.primaryKeySize(); i++)
                 where.and(eq(mapper.getPrimaryKeyColumn(i).mappedProperty.getMappedName(), bindMarker()));
-            for (Mapper.Option option : options) {
+            for (Mapper.Option option : options.values()) {
                 option.validate(QueryType.DEL, manager);
                 option.modifyQueryString(delete);
             }
@@ -96,6 +87,13 @@ enum QueryType {
         }
     };
 
-    abstract String makePreparedQueryString(TableMetadata table, EntityMapper<?> mapper, MappingManager manager, Set<AliasedMappedProperty> columns, Collection<Mapper.Option> options);
+    abstract String makePreparedQueryString(TableMetadata table, EntityMapper<?> mapper, MappingManager manager, Set<AliasedMappedProperty> columns, EnumMap<Mapper.Option.Type, Mapper.Option> options);
 
+    private static String getEffectiveKeyspace(EntityMapper<?> mapper, EnumMap<Mapper.Option.Type, Mapper.Option> options) {
+        Mapper.Option.Keyspace option = (Mapper.Option.Keyspace) options.get(Mapper.Option.Type.KEYSPACE);
+        if (option != null && option.getKeyspace() != null)
+            return option.getKeyspace();
+
+        return mapper.keyspace;
+    }
 }

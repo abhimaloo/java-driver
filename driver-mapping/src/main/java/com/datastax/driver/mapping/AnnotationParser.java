@@ -57,23 +57,9 @@ class AnnotationParser {
 
         if (Strings.isNullOrEmpty(table.keyspace())) {
             String loggedKeyspace = mappingManager.getSession().getLoggedKeyspace();
-            if (Strings.isNullOrEmpty(loggedKeyspace))
-                throw new IllegalArgumentException(String.format(
-                        "Error creating mapper for %s, the @Table annotation declares no default keyspace, and the session is not currently logged to any keyspace",
-                        entityClass
-                ));
-            ksName = Metadata.quote(loggedKeyspace);
-        }
-
-        KeyspaceMetadata keyspaceMetadata = mappingManager.getSession().getCluster().getMetadata().getKeyspace(ksName);
-        if (keyspaceMetadata == null)
-            throw new IllegalArgumentException(String.format("Keyspace %s does not exist", ksName));
-
-        AbstractTableMetadata tableMetadata = keyspaceMetadata.getTable(tableName);
-        if (tableMetadata == null) {
-            tableMetadata = keyspaceMetadata.getMaterializedView(tableName);
-            if (tableMetadata == null)
-                throw new IllegalArgumentException(String.format("Table or materialized view %s does not exist in keyspace %s", tableName, ksName));
+            if (!Strings.isNullOrEmpty(loggedKeyspace)) {
+                ksName = Metadata.quote(loggedKeyspace);
+            }
         }
 
         EntityMapper<T> mapper = new EntityMapper<T>(entityClass, ksName, tableName, writeConsistency, readConsistency);
@@ -96,10 +82,6 @@ class AnnotationParser {
 
             if (mappingManager.protocolVersionAsInt == 1 && mappedProperty.isComputed())
                 throw new UnsupportedOperationException("Computed properties are not supported with native protocol v1");
-
-            if (!mappedProperty.isComputed() && tableMetadata.getColumn(mappedProperty.getMappedName()) == null)
-                throw new IllegalArgumentException(String.format("Column %s does not exist in table %s.%s",
-                        mappedProperty.getMappedName(), ksName, tableName));
 
             if (mappedProperty.isPartitionKey())
                 pks.add(aliasedMappedProperty);

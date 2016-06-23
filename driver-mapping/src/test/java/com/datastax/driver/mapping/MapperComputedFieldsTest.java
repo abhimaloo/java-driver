@@ -17,6 +17,7 @@ package com.datastax.driver.mapping;
 
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.exceptions.CodecNotFoundException;
+import com.datastax.driver.core.exceptions.InvalidQueryException;
 import com.datastax.driver.core.utils.CassandraVersion;
 import com.datastax.driver.mapping.annotations.*;
 import org.testng.SkipException;
@@ -127,10 +128,11 @@ public class MapperComputedFieldsTest extends CCMTestsSupport {
         User_WrongComputedType user = mapper.get("testlogin");
     }
 
-    @Test(groups = "short", expectedExceptions = IllegalArgumentException.class)
+    @Test(groups = "short", expectedExceptions = InvalidQueryException.class)
     @CassandraVersion("2.0.0")
     void should_fail_if_computed_field_marked_with_column_annotation() {
-        mappingManager.mapper(User_WrongAnnotationForComputed.class);
+        Mapper<User_WrongAnnotationForComputed> mapper = mappingManager.mapper(User_WrongAnnotationForComputed.class);
+        mapper.get("testlogin");
     }
 
     @Table(name = "user")

@@ -92,15 +92,6 @@ public class MapperDefaultKeyspaceTest extends CCMTestsSupport {
 
     @Test(groups = "short",
             expectedExceptions = IllegalArgumentException.class,
-            expectedExceptionsMessageRegExp = "Error creating mapper for class com.datastax.driver.mapping.MapperDefaultKeyspaceTest\\$Group, the @Table annotation declares no default keyspace, and the session is not currently logged to any keyspace")
-    public void should_throw_a_meaningful_error_message_when_no_default_table_keyspace_and_session_not_logged() {
-        Session session2 = cluster().connect();
-        MappingManager manager = new MappingManager(session2);
-        manager.mapper(Group.class);
-    }
-
-    @Test(groups = "short",
-            expectedExceptions = IllegalArgumentException.class,
             expectedExceptionsMessageRegExp = "Error creating UDT codec for class com.datastax.driver.mapping.MapperDefaultKeyspaceTest\\$GroupName, the @UDT annotation declares no default keyspace, and the session is not currently logged to any keyspace")
     public void should_throw_a_meaningful_error_message_when_no_default_udt_keyspace_and_session_not_logged() {
         Session session2 = cluster().connect();
