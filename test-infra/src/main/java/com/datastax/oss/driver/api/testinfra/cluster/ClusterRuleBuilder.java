@@ -15,12 +15,13 @@
  */
 package com.datastax.oss.driver.api.testinfra.cluster;
 
+import com.datastax.oss.driver.api.core.cql.CqlSession;
 import com.datastax.oss.driver.api.core.metadata.NodeStateListener;
 import com.datastax.oss.driver.api.testinfra.CassandraResourceRule;
 import com.datastax.oss.driver.api.testinfra.ccm.CcmRule;
 import com.datastax.oss.driver.api.testinfra.simulacron.SimulacronRule;
 
-public class ClusterRuleBuilder {
+public class ClusterRuleBuilder<T extends CqlSession> {
 
   private final CassandraResourceRule cassandraResource;
   private boolean createDefaultSession = true;
@@ -76,8 +77,8 @@ public class ClusterRuleBuilder {
     return this;
   }
 
-  public ClusterRule build() {
-    return new ClusterRule(
+  public ClusterRule<T> build() {
+    return new ClusterRule<>(
         cassandraResource, createKeyspace, createDefaultSession, nodeStateListeners, options);
   }
 }

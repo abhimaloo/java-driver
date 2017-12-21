@@ -34,6 +34,8 @@ interface ReplicationStrategy {
         return new SimpleReplicationStrategy(replicationConfig);
       case "org.apache.cassandra.locator.NetworkTopologyStrategy":
         return new NetworkTopologyReplicationStrategy(replicationConfig, logPrefix);
+      case "org.apache.cassandra.locator.EverywhereStrategy":
+        return new EverywhereStrategy();
       default:
         throw new IllegalArgumentException("Unsupported replication strategy: " + strategyClass);
     }

@@ -49,8 +49,8 @@ public class PreparedStatementInvalidationIT {
   @Rule public CcmRule ccmRule = CcmRule.getInstance();
 
   @Rule
-  public ClusterRule clusterRule =
-      new ClusterRule(ccmRule, "request.page-size = 2", "request.timeout = 30 seconds");
+  public ClusterRule<CqlSession> clusterRule =
+      new ClusterRule<>(ccmRule, "request.page-size = 2", "request.timeout = 30 seconds");
 
   @Rule public ExpectedException thrown = ExpectedException.none();
 
