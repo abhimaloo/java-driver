@@ -290,8 +290,18 @@ class RequestHandler {
             try {
                 Host host;
                 while (!isDone.get() && (host = queryPlan.next()) != null && !queryStateRef.get().isCancelled()) {
-                    if (query(host))
+                    if (query(host)) {
+                        if (metricsEnabled()) {
+                            metrics().getRegistry()
+                                    .counter(MetricsUtil.hostMetricName("writes.", host))
+                                    .inc();
+                        }
                         return;
+                    } else if (metricsEnabled()) {
+                        metrics().getRegistry()
+                                .counter(MetricsUtil.hostMetricName("write-errors.", host))
+                                .inc();
+                    }
                 }
                 if (current != null) {
                     if (triedHosts == null)
