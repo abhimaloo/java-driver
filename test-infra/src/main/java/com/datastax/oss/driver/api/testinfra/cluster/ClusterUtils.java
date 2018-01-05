@@ -24,7 +24,11 @@ import com.datastax.oss.driver.api.core.cql.CqlSession;
 import com.datastax.oss.driver.api.core.cql.SimpleStatement;
 import com.datastax.oss.driver.api.core.metadata.NodeStateListener;
 import com.datastax.oss.driver.api.testinfra.CassandraResourceRule;
+import com.datastax.oss.driver.internal.core.DefaultCluster;
 import com.datastax.oss.driver.internal.testinfra.cluster.TestConfigLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -55,6 +59,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * ClusterRule} provides a simpler alternative.
  */
 public class ClusterUtils {
+  private static final Logger LOG = LoggerFactory.getLogger(ClusterUtils.class);
   private static final AtomicInteger keyspaceId = new AtomicInteger();
 
   private static final String CLUSTER_BUILDER_CLASS =
@@ -69,8 +74,7 @@ public class ClusterUtils {
       Method m = clazz.getMethod("builder");
       return (ClusterBuilder<?, ? extends Cluster<T>>) m.invoke(null);
     } catch (Exception e) {
-      e.printStackTrace();
-      // TODO: Logger
+      LOG.warn("Could not construct ClusterBuilder from {}, using default implementation.", CLUSTER_BUILDER_CLASS, e);
       return (ClusterBuilder<?, ? extends Cluster<T>>) Cluster.builder();
     }
   }
