@@ -24,7 +24,6 @@ import com.datastax.oss.driver.api.core.cql.CqlSession;
 import com.datastax.oss.driver.api.core.cql.SimpleStatement;
 import com.datastax.oss.driver.api.core.metadata.NodeStateListener;
 import com.datastax.oss.driver.api.testinfra.CassandraResourceRule;
-import com.datastax.oss.driver.internal.core.DefaultCluster;
 import com.datastax.oss.driver.internal.testinfra.cluster.TestConfigLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,8 +87,7 @@ public class ClusterUtils {
       Method m = clazz.getMethod("configPath");
       return (String) m.invoke(null);
     } catch (Exception e) {
-      e.printStackTrace();
-      // TODO: Logger
+      LOG.warn("Could not get config path from {}, using default.", CLUSTER_BUILDER_CLASS, e);
       return "datastax-java-driver";
     }
   }
