@@ -74,7 +74,10 @@ public class ClusterUtils {
       Method m = clazz.getMethod("builder");
       return (ClusterBuilder<?, ? extends Cluster<T>>) m.invoke(null);
     } catch (Exception e) {
-      LOG.warn("Could not construct ClusterBuilder from {}, using default implementation.", CLUSTER_BUILDER_CLASS, e);
+      LOG.warn(
+          "Could not construct ClusterBuilder from {}, using default implementation.",
+          CLUSTER_BUILDER_CLASS,
+          e);
       return (ClusterBuilder<?, ? extends Cluster<T>>) Cluster.builder();
     }
   }
