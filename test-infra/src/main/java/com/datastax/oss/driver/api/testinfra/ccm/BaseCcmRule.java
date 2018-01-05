@@ -21,10 +21,11 @@ import com.datastax.oss.driver.api.core.ProtocolVersion;
 import com.datastax.oss.driver.api.testinfra.CassandraRequirement;
 import com.datastax.oss.driver.api.testinfra.CassandraResourceRule;
 import com.datastax.oss.driver.api.testinfra.DseRequirement;
-import java.util.Optional;
 import org.junit.AssumptionViolatedException;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
+
+import java.util.Optional;
 
 public abstract class BaseCcmRule extends CassandraResourceRule {
 
@@ -67,7 +68,7 @@ public abstract class BaseCcmRule extends CassandraResourceRule {
                 lessThan ? "less than" : "at least",
                 dse ? "DSE" : "C*",
                 requirement,
-                dse ? ccmBridge.getDseVersion() : ccmBridge.getCassandraVersion(),
+                dse ? ccmBridge.getDseVersion().orElse(null) : ccmBridge.getCassandraVersion(),
                 description));
       }
     };
