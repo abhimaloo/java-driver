@@ -4,6 +4,7 @@
 
 ### 4.0.0-alpha3 (in progress)
 
+- [improvement] JAVA-1707: Add test infrastructure for running DSE clusters with CCM
 - [new feature] JAVA-1647: Handle metadata_changed flag in protocol v5
 - [new feature] JAVA-1633: Handle per-request keyspace in protocol v5
 - [improvement] JAVA-1678: Warn if auth is configured on the client but not the server
@@ -17,7 +18,6 @@
 - [improvement] JAVA-1662: Raise default request timeout
 - [improvement] JAVA-1566: Enforce API rules automatically
 - [bug] JAVA-1584: Validate that no bound values are unset in protocol v3
-- [improvement] JAVA-1707: Test infrastructure for running DSE clusters with CCM
 
 
 ### 4.0.0-alpha2

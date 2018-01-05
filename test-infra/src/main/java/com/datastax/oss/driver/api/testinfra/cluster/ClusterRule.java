@@ -71,7 +71,7 @@ public class ClusterRule<T extends CqlSession> extends ExternalResource {
    *
    * @param cassandraResource resource to create clusters for.
    */
-  public static <T extends CqlSession> ClusterRuleBuilder<T> builder(
+  public static <T extends CqlSession> ClusterRuleBuilder<ClusterRuleBuilder, T> builder(
       CassandraResourceRule cassandraResource) {
     return new ClusterRuleBuilder<>(cassandraResource);
   }

@@ -16,6 +16,7 @@
 package com.datastax.oss.driver.api.testinfra.ccm;
 
 import com.datastax.oss.driver.api.core.CassandraVersion;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -34,6 +35,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+
 import org.apache.commons.exec.CommandLine;
 import org.apache.commons.exec.DefaultExecutor;
 import org.apache.commons.exec.ExecuteStreamHandler;
@@ -49,10 +51,6 @@ import static io.netty.util.internal.PlatformDependent.isWindows;
 public class CcmBridge implements AutoCloseable {
 
   private static final Logger logger = LoggerFactory.getLogger(CcmBridge.class);
-
-  private final CassandraVersion version;
-  private final String directory;
-  private final boolean dse;
 
   private final int[] nodes;
 
@@ -71,18 +69,12 @@ public class CcmBridge implements AutoCloseable {
 
   private final String jvmArgs;
 
-  public static final CassandraVersion DEFAULT_CASSANDRA_VERSION =
+  public static final CassandraVersion VERSION =
       CassandraVersion.parse(System.getProperty("ccm.version", "3.11.0"));
 
-  public static final String DEFAULT_CASSANDRA_DIRECTORY = System.getProperty("ccm.directory");
+  public static final String INSTALL_DIRECTORY = System.getProperty("ccm.directory");
 
-  public static final Boolean DEFAULT_DSE_ENABLEMENT;
-
-  static {
-    String dseProperty = System.getProperty("ccm.dse");
-    DEFAULT_DSE_ENABLEMENT =
-        dseProperty != null && (dseProperty.isEmpty() || Boolean.parseBoolean(dseProperty));
-  }
+  public static final Boolean DSE_ENABLEMENT = Boolean.getBoolean("ccm.dse");
 
   public static final String DEFAULT_CLIENT_TRUSTSTORE_PASSWORD = "cassandra1sfun";
   public static final String DEFAULT_CLIENT_TRUSTSTORE_PATH = "/client.truststore";
@@ -112,11 +104,19 @@ public class CcmBridge implements AutoCloseable {
   private static final File DEFAULT_SERVER_KEYSTORE_FILE =
       createTempStore(DEFAULT_SERVER_KEYSTORE_PATH);
 
+  // major DSE versions
+  private static final CassandraVersion V6_0_0 = CassandraVersion.parse("6.0.0");
+  private static final CassandraVersion V5_1_0 = CassandraVersion.parse("5.1.0");
+  private static final CassandraVersion V5_0_0 = CassandraVersion.parse("5.0.0");
+
+  // mapped C* versions from DSE versions
+  private static final CassandraVersion V4_0_0 = CassandraVersion.parse("4.0.0");
+  private static final CassandraVersion V3_10 = CassandraVersion.parse("3.10");
+  private static final CassandraVersion V3_0_15 = CassandraVersion.parse("3.0.15");
+  private static final CassandraVersion V2_1_19 = CassandraVersion.parse("2.1.19");
+
   private CcmBridge(
       Path configDirectory,
-      CassandraVersion version,
-      boolean dse,
-      String directory,
       int[] nodes,
       String ipPrefix,
       Map<String, Object> cassandraConfiguration,
@@ -125,9 +125,6 @@ public class CcmBridge implements AutoCloseable {
       Collection<String> jvmArgs,
       List<String> dseWorkloads) {
     this.configDirectory = configDirectory;
-    this.version = version;
-    this.dse = dse;
-    this.directory = directory;
     if (nodes.length == 1) {
       // Hack to ensure that the default DC is always called 'dc1': pass a list ('-nX:0') even if
       // there is only one DC (with '-nX', CCM configures `SimpleSnitch`, which hard-codes the name
@@ -159,40 +156,34 @@ public class CcmBridge implements AutoCloseable {
   }
 
   public Optional<CassandraVersion> getDseVersion() {
-    return dse ? Optional.of(version) : Optional.empty();
+    return DSE_ENABLEMENT ? Optional.of(VERSION) : Optional.empty();
   }
 
   public CassandraVersion getCassandraVersion() {
-    if (!dse) {
-      return version;
+    if (!DSE_ENABLEMENT) {
+      return VERSION;
     } else {
-      CassandraVersion cassandraVersion = version;
-      if (cassandraVersion.getMajor() == 6) {
-        // 6.0 = 4.0.x
-        return CassandraVersion.parse("4.0.0");
-      } else if (cassandraVersion.getMajor() == 5) {
-        if (cassandraVersion.getMinor() == 0) {
-          // 5.0 = 3.0.x
-          return CassandraVersion.parse("3.0.15");
-        } else {
-          // 5.1 == 3.10
-          return CassandraVersion.parse("3.10");
-        }
+      CassandraVersion stableVersion = VERSION.nextStable();
+      if (stableVersion.compareTo(V6_0_0) >= 0) {
+        return V4_0_0;
+      } else if (stableVersion.compareTo(V5_1_0) >= 0) {
+        return V3_10;
+      } else if (stableVersion.compareTo(V5_0_0) >= 0) {
+        return V3_0_15;
       } else {
-        // assume anything older is 2.1.19
-        return CassandraVersion.parse("2.1.19");
+        return V2_1_19;
       }
     }
   }
 
   public void create() {
     if (created.compareAndSet(false, true)) {
-      if (directory != null) {
-        createOptions.add("--install-dir=" + new File(directory).getAbsolutePath());
+      if (INSTALL_DIRECTORY != null) {
+        createOptions.add("--install-dir=" + new File(INSTALL_DIRECTORY).getAbsolutePath());
       } else {
-        createOptions.add("-v " + version.toString());
+        createOptions.add("-v " + VERSION.toString());
       }
-      if (dse) {
+      if (DSE_ENABLEMENT) {
         createOptions.add("--dse");
       }
       execute(
@@ -207,7 +198,10 @@ public class CcmBridge implements AutoCloseable {
       for (Map.Entry<String, Object> conf : cassandraConfiguration.entrySet()) {
         execute("updateconf", String.format("%s:%s", conf.getKey(), conf.getValue()));
       }
-      if (dse) {
+      if (getCassandraVersion().compareTo(CassandraVersion.V2_2_0) >= 0) {
+        execute("updateconf", "enable_user_defined_functions:true");
+      }
+      if (DSE_ENABLEMENT) {
         for (Map.Entry<String, Object> conf : dseConfiguration.entrySet()) {
           execute("updatedseconf", String.format("%s:%s", conf.getKey(), conf.getValue()));
         }
@@ -301,6 +295,8 @@ public class CcmBridge implements AutoCloseable {
   /**
    * Extracts a keystore from the classpath into a temporary file.
    *
+   * <p>
+   *
    * <p>This is needed as the keystore could be part of a built test jar used by other projects, and
    * they need to be extracted to a file system so cassandra may use them.
    *
@@ -335,9 +331,6 @@ public class CcmBridge implements AutoCloseable {
     private final Map<String, Object> dseConfiguration = new LinkedHashMap<>();
     private final List<String> jvmArgs = new ArrayList<>();
     private String ipPrefix = "127.0.0.";
-    private CassandraVersion version = CcmBridge.DEFAULT_CASSANDRA_VERSION;
-    private String directory = CcmBridge.DEFAULT_CASSANDRA_DIRECTORY;
-    private boolean dse = CcmBridge.DEFAULT_DSE_ENABLEMENT;
     private final List<String> createOptions = new ArrayList<>();
     private final List<String> dseWorkloads = new ArrayList<>();
 
@@ -412,14 +405,8 @@ public class CcmBridge implements AutoCloseable {
     }
 
     public CcmBridge build() {
-      if (version.compareTo(CassandraVersion.V2_2_0) >= 0) {
-        cassandraConfiguration.put("enable_user_defined_functions", "true");
-      }
       return new CcmBridge(
           configDirectory,
-          version,
-          dse,
-          directory,
           nodes,
           ipPrefix,
           cassandraConfiguration,
